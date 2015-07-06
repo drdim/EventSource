@@ -1,6 +1,22 @@
 EventSource polyfill - http://www.w3.org/TR/eventsource/
 ========================================================
 
+Installing:
+-----------
+
+You can get the code from npm or bower:
+
+```
+npm install event-source-polyfill
+```
+
+```
+bower install event-source-polyfill
+```
+
+Just include `eventsource.js` or `eventsource.min.js` in your page to use the polyfill.
+
+
 Browser support:
 ----------------
 
@@ -26,11 +42,21 @@ Specification:
 
 * http://www.w3.org/TR/eventsource/
 
+Build:
+------
+
+* To build EventSource, just install grunt and this project devDependencies and run it. It should generate a new version of eventsource.min.js.
+
+Notes:
+-----
+ * If you are using HTTP Basic Authentication, you can embed credentials into the URL - `http://username:password@github.com`.
+
 Other EventSource polyfills:
 ----------------------------
 
 * https://github.com/remy/polyfills/blob/master/EventSource.js by Remy Sharp
-* https://github.com/rwldrn/jquery.eventsource by rick waldron
+* https://github.com/rwldrn/jquery.eventsource by Rick Waldron
+* https://github.com/amvtek/EventSource by AmvTek
 
 EXAMPLE
 -------
