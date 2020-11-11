@@ -4,15 +4,14 @@ var PORT2 = 8003;
 var http = require("http");
 var fs = require("fs");
 var url = require("url");
-var util = require("util");
 var EventEmitter = require("events").EventEmitter;
 
-util.puts("Version: " + process.version);
-util.puts("Starting server at http://localhost:" + PORT1);
+console.log("Version: " + process.version);
+console.log("Starting server at http://localhost:" + PORT1);
 
 process.on("uncaughtException", function (e) {
   try {
-    util.puts("Caught exception: " + e + " " + (typeof e === "object" ? e.stack : ""));
+    console.log("Caught exception: " + e + " " + (typeof e === "object" ? e.stack : ""));
   } catch (ignore) {
   }
 });
@@ -21,6 +20,7 @@ var emitter = new EventEmitter();
 var history = [];
 var heartbeatTimeout = 9000;
 var firstId = Number(new Date());
+var idCounter = 0;
 
 setInterval(function () {
   emitter.emit("message");
@@ -49,9 +49,16 @@ function eventStream(request, response) {
     response.write(":\n");
   }
 
+  var id = ++idCounter;
+  console.log('connected ' + id);
+  history.push('connected ' + id);
+  emitter.emit("message");
   response.on("close", function () {
+    console.log('disconnected ' + id);
     emitter.removeListener("message", sendMessages);
     response.end();
+    history.push('disconnected ' + id);
+    emitter.emit("message");
   });
 
   response.socket.setTimeout(0); // see http://contourline.wordpress.com/2011/03/30/preventing-server-timeout-in-node-js/
@@ -77,12 +84,25 @@ function eventStream(request, response) {
     body = body.replace(/<authorization>/g, function () {
       return authorization;
     });
+    body = body.replace(/<bigData>/g, function () {
+      return new Array(1024 * 1024 * 16).join("X");
+    });
     body = body.split(/<delay\((\d+)\)>/);
     i = -1;
     var next = function () {
       ++i;
       if (body[i] !== "") {
-        response.write(body[i]);
+        var pieces = body[i].split(/<byte\(([0-9A-F][0-9A-F])\)>/);
+        for (var j = 0; j < pieces.length; j += 2) {
+          if (pieces[j] !== "") {
+            response.write(pieces[j]);
+          }
+          if (j + 1 < pieces.length) {
+            var b = parseInt(pieces[j + 1], 16);
+            response.write(Buffer.from([b]));
+          }
+        }
+        //response.write(body[i]);
       }
       if (++i < body.length) {
         setTimeout(next, Number(body[i]));
@@ -96,7 +116,8 @@ function eventStream(request, response) {
 
   response.writeHead(200, {
     "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
+    "Cache-Control": "no-store",
+    "Access-control-allow-headers": "x-requested-with",
     "Access-Control-Allow-Origin": "*"
   });
 
@@ -157,7 +178,7 @@ function onRequest(request, response) {
           var raw = fs.createReadStream(__dirname + pathname);
           response.writeHead(200, {
             "Content-Type": (pathname.indexOf(".js") !== -1 ? "text/javascript" : (pathname.indexOf(".css") !== -1 ? "text/css" : "text/html")),
-            "Last-Modified": stats.mtime
+            "Last-Modified": stats.mtime.toUTCString()
           });
           raw.pipe(response);
         }
